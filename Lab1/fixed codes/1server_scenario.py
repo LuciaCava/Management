@@ -7,7 +7,7 @@ import numpy as np
 # To take the measurements
 # ******************************************************************************
 class Measure:
-    def __init__(self,Narr,Ndep,NAveraegUser,OldTimeEvent,AverageDelay, SentToCloud):
+    def __init__(self,Narr,Ndep,NAveraegUser,OldTimeEvent,AverageDelay, SentToCloud, busy):
         self.arr = Narr
         self.dep = Ndep
         self.ut = NAveraegUser
@@ -15,6 +15,7 @@ class Measure:
         self.delay = AverageDelay
         self.pCloud = SentToCloud
         self.waitingTime = []
+        self.busy = busy 
  
 # ******************************************************************************
 # Client
@@ -85,6 +86,7 @@ def arrival_process(environment,queue, service, arrival):
             if users == 1: 
                 BusyServer = True
                 service_time = random.expovariate(1.0/service)
+                data.busy += service_time
                 env.process(departure_process(env, service_time,queue, service))
         else: 
             #update state variable and put the client in the queue
@@ -98,6 +100,7 @@ def arrival_process(environment,queue, service, arrival):
                 if users == 1: 
                     BusyServer = True
                     service_time = random.expovariate(1.0/service)
+                    data.busy += service_time
                     env.process(departure_process(env, service_time,queue, service))
             elif users>=maxBuffer:
                 data.pCloud += 1
@@ -134,6 +137,7 @@ def departure_process(environment, service_time, queue, service):
         BusyServer = False
     else:
         service_time = random.expovariate(1.0/service)
+        data.busy += service_time
         env.process(departure_process(env, service_time,queue, service))
         # the execution flow will resume here
         # when the "timeout" event is executed by the "environment"
@@ -149,7 +153,7 @@ def departure_process(environment, service_time, queue, service):
 
 random.seed(42)
 
-data = Measure(0,0,0,0,0,0)
+data = Measure(0,0,0,0,0,0,0)
 
 env = simpy.Environment()
 
@@ -163,6 +167,9 @@ env.run(until=SIM_TIME)
 # compute time in waiting line for each user
 for i in range(len(served_user)-1):
     data.waitingTime.append(served_user[i] - entrance_user[i])
+    
+# erase values equal to zero 
+delayed_waiting = [w for w in data.waitingTime if w!=0]
 
 
 # print output data
@@ -181,6 +188,7 @@ print("Sent to the cloud rate = ", data.pCloud/env.now)
 print("\nAverage number of users (E[N]) = ",data.ut/env.now)
 print("Average delay (E[T]) =  ",data.delay/data.dep)
 print("Average time in the waiting line (E[T_w]) =  ", np.mean(data.waitingTime))
+print("Average time in the waiting line only considering delayed packets (E[T_w]) =  ", np.mean(delayed_waiting))
 
 
 if len(MM1)>0:
@@ -213,7 +221,7 @@ if infiniteBuff==True or maxBuffer==1:
             random.seed(42)
             arrival = SERVICE/load
             
-            data = Measure(0,0,0,0,0,0)
+            data = Measure(0,0,0,0,0,0, 0)
             #ser_rate.append(1/serv)
             env = simpy.Environment()
             
@@ -251,7 +259,7 @@ if infiniteBuff==True or maxBuffer==1:
 
 # for finite buffer scenario: plot measurement with diff buffer size 
 if maxBuffer >1 : 
-    loads=np.arange(0.0, 1.05, 0.05)
+    loads=np.arange(0.05, 1.05, 0.05)
     s = len(loads)
     buffSize = [8,16,32,64]
     b = len(buffSize)
@@ -274,7 +282,7 @@ if maxBuffer >1 :
                 random.seed(42)
                 arrival = SERVICE/load
                 
-                data = Measure(0,0,0,0,0,0)
+                data = Measure(0,0,0,0,0,0,0)
                 env = simpy.Environment()
                 # start the arrival processes
                 env.process(arrival_process(env, MM1, SERVICE, arrival))
@@ -284,6 +292,7 @@ if maxBuffer >1 :
                 e_n[i,j]= data.ut/env.now
                 e_t[i,j] = data.delay/data.dep
                 cloud[i,j] = data.pCloud/data.arr
+               
             j = j+1
             
         i = i +1
@@ -292,7 +301,7 @@ if maxBuffer >1 :
     plt.plot(loads, e_n[1,:], 'b',label='B=16')    
     plt.plot(loads, e_n[2,:], 'g', label='B=32') 
     plt.plot(loads, e_n[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.plot('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.legend()
@@ -302,7 +311,7 @@ if maxBuffer >1 :
     plt.plot(loads, e_t[1,:], 'b',label='B=16')    
     plt.plot(loads, e_t[2,:], 'g', label='B=32') 
     plt.plot(loads, e_t[3,:], 'y', label='B=64')
-    plt.xlabel('LOads')
+    plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.legend()
     plt.title('Average delay')
@@ -317,10 +326,11 @@ if maxBuffer >1 :
     plt.title('Rate of packets sent to the cloud')
     plt.legend()
     plt.show()
+    
             
             
- # ******************************************************************************
-# ANALYZE CASE NO BUFFER DIFFERENCE SERVICE RATES
+# ******************************************************************************
+# ANALYZE CASE NO BUFFER WITH DIFFERENCE SERVICE RATES
 # ******************************************************************************
 if infiniteBuff==False and maxBuffer==1:
     print("DIFFERENT SERVICE RATE")
@@ -356,44 +366,70 @@ if infiniteBuff==False and maxBuffer==1:
                 e_t[i,j] = data.delay/data.dep
                 cloud[i,j] = data.pCloud/data.arr
             j = j+1
-            
         i = i +1
 
-    plt.plot(loads, e_n[0,:], 'r', label='serv')
-    plt.plot(loads, e_n[1,:], 'b',label='serv')    
-    plt.plot(loads, e_n[2,:], 'g', label='B=32') 
-    plt.plot(loads, e_n[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.plot(loads, e_n[0,:], 'r', label='serv1')
+    plt.plot(loads, e_n[1,:], 'b',label='serv2')    
+    plt.plot(loads, e_n[2,:], 'g', label='serv3') 
+    plt.plot(loads, e_n[3,:], 'y', label='serv4')
+    plt.xlabel('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.legend()
     plt.show()
     
-    plt.plot(loads, e_t[0,:], 'r', label='B=8')
-    plt.plot(loads, e_t[1,:], 'b',label='B=16')    
-    plt.plot(loads, e_t[2,:], 'g', label='B=32') 
-    plt.plot(loads, e_t[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.plot(loads, e_t[0,:], 'r', label='serv1')
+    plt.plot(loads, e_t[1,:], 'b',label='serv2')    
+    plt.plot(loads, e_t[2,:], 'g', label='serv3') 
+    plt.plot(loads, e_t[3,:], 'y', label='serv4')
+    plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.legend()
     plt.title('Average delay')
     plt.show()
     
-    plt.plot(loads, cloud[0,:], 'r', label='B=8')
-    plt.plot(loads, cloud[1,:], 'b',label='B=16')    
-    plt.plot(loads, cloud[2,:], 'g', label='B=32') 
-    plt.plot(loads, cloud[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.plot(loads, cloud[0,:], 'r', label='serv1')
+    plt.plot(loads, cloud[1,:], 'b',label='serv2')    
+    plt.plot(loads, cloud[2,:], 'g', label='serv3') 
+    plt.plot(loads, cloud[3,:], 'y', label='serv4')
+    plt.xlabel('Loads')
     plt.ylabel('Cloud rate')
     plt.title('Rate of packets sent to the cloud')
     plt.legend()
     plt.show()
+    
+   
             
+# ******************************************************************************
+# EVALUATE BUSY RATE UNDER DIFFERENT BUFFER SIZE AT FIXED LOAD=0.85
+# ******************************************************************************     
             
-            
-            
-            
-            
-            
+if maxBuffer>1:
+    buffSize = np.arange(5, 60, 5)
+    LOAD = 0.85
+    busy_time=[]
+    for buff in buffSize:
+        MM1 = [] 
+        arrivals=0
+        users=0
+        BusyServer=False
+        random.seed(42)
+        serv = 10
+        arrival = serv/load
+        maxBuffer = buff
+        data = Measure(0,0,0,0,0,0,0)
+        env = simpy.Environment()
+        # start the arrival processes
+        env.process(arrival_process(env, MM1, SERVICE, arrival))
+        # simulate until SIM_TIME
+        env.run(until=SIM_TIME)
+        busy_time.append(data.busy/env.now)
+        
+    plt.plot(buffSize, busy_time, 'r', label='serv1')
+    plt.xlabel('Buffer size')
+    plt.ylabel('Busy time')
+    plt.title('Busy time vs buffer suze')
+    plt.legend()
+    plt.show()
     
 

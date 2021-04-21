@@ -216,6 +216,8 @@ env.run(until=SIM_TIME)
 for i in range(len(served_user)-1):
     dataSys.waitingTime.append(served_user[i] - entrance_user[i])
 
+# erase values equal to zero 
+delayed_waiting = [w for w in dataSys.waitingTime if w!=0]
 
 # print output data
 print("MEASUREMENTS \n")
@@ -233,6 +235,7 @@ print("Sent to the cloud rate = ", dataSys.pCloud/env.now)
 print("\nAverage number of users (E[N]) = ",dataSys.ut/env.now)
 print("Average delay (E[T]) =  ",dataSys.delay/dataSys.dep)
 print("Average time in the waiting line (E[T_w]) =  ", np.mean(dataSys.waitingTime))
+print("Average time in the waiting line only considering delayed packets (E[T_w]) =  ", np.mean(delayed_waiting))
 
 print("\nThe first server processed packets: ", data1.arr)
 print(f"and was busy the {(data1.busy/env.now)*100} % of the time")
@@ -353,9 +356,9 @@ if maxBuffer>2 :
             
         i = i +1
 
-    plt.plot(loads, e_n[0,:], 'r', label='B=8')
-    plt.plot(loads, e_n[1,:], 'b',label='B=16')    
-    plt.plot(loads, e_n[2,:], 'g', label='B=32') 
+    plt.plot(loads, e_n[0,:], 'r', label='B=4')
+    plt.plot(loads, e_n[1,:], 'b',label='B=8')    
+    plt.plot(loads, e_n[2,:], 'g', label='B=16') 
      #plt.plot(loads, e_n[3,:], 'y', label='B=64')
     plt.xlabel('Service rate-loads')
     plt.ylabel('E[N]')
@@ -363,9 +366,9 @@ if maxBuffer>2 :
     plt.legend()
     plt.show()
     
-    plt.plot(loads, e_t[0,:], 'r', label='B=8')
-    plt.plot(loads, e_t[1,:], 'b',label='B=16')    
-    plt.plot(loads, e_t[2,:], 'g', label='B=32') 
+    plt.plot(loads, e_t[0,:], 'r', label='B=4')
+    plt.plot(loads, e_t[1,:], 'b',label='B=8')    
+    plt.plot(loads, e_t[2,:], 'g', label='B=16') 
     #plt.plot(loads, e_t[3,:], 'y', label='B=64')
     plt.xlabel('Service rate-loads')
     plt.ylabel('E[T]')
@@ -373,9 +376,9 @@ if maxBuffer>2 :
     plt.title('Average delay')
     plt.show()
     
-    plt.plot(loads, cloud[0,:], 'r', label='B=8')
-    plt.plot(loads, cloud[1,:], 'b',label='B=16')    
-    plt.plot(loads, cloud[2,:], 'g', label='B=32') 
+    plt.plot(loads, cloud[0,:], 'r', label='B=4')
+    plt.plot(loads, cloud[1,:], 'b',label='B=8')    
+    plt.plot(loads, cloud[2,:], 'g', label='B=16') 
     #plt.plot(loads, cloud[3,:], 'y', label='B=64')
     plt.xlabel('Service rate-loads')
     plt.ylabel('Cloud rate')
