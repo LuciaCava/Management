@@ -293,21 +293,21 @@ if infiniteBuff==True or maxBuffer==2:
     
     # plot the avg number of packets 
     plt.plot(loads, e_n, 'r')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.show()
     
     # plot the avg delay
     plt.plot(loads, e_t, 'r')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.title('Average delay')
     plt.show()
     
     if infiniteBuff==False: 
         plt.plot(loads, cloud, 'r')
-        plt.xlabel('Service rate-loads')
+        plt.xlabel('Loads')
         plt.ylabel('Cloud rate')
         plt.title('Rate of packets sent to the cloud')
         plt.show()
@@ -360,7 +360,7 @@ if maxBuffer>2 :
     plt.plot(loads, e_n[1,:], 'b',label='B=8')    
     plt.plot(loads, e_n[2,:], 'g', label='B=16') 
      #plt.plot(loads, e_n[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.legend()
@@ -370,7 +370,7 @@ if maxBuffer>2 :
     plt.plot(loads, e_t[1,:], 'b',label='B=8')    
     plt.plot(loads, e_t[2,:], 'g', label='B=16') 
     #plt.plot(loads, e_t[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.legend()
     plt.title('Average delay')
@@ -380,7 +380,7 @@ if maxBuffer>2 :
     plt.plot(loads, cloud[1,:], 'b',label='B=8')    
     plt.plot(loads, cloud[2,:], 'g', label='B=16') 
     #plt.plot(loads, cloud[3,:], 'y', label='B=64')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('Cloud rate')
     plt.title('Rate of packets sent to the cloud')
     plt.legend()

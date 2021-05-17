@@ -236,21 +236,21 @@ if infiniteBuff==True or maxBuffer==1:
     
     # plot the avg number of packets 
     plt.plot(loads, e_n, 'r')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.show()
     
     # plot the avg delay
     plt.plot(loads, e_t, 'r')
-    plt.xlabel('Service rate-loads')
+    plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.title('Average delay')
     plt.show()
     
     if infiniteBuff==False: 
         plt.plot(loads, cloud, 'r')
-        plt.xlabel('Service rate-loads')
+        plt.xlabel('Loads')
         plt.ylabel('Cloud rate')
         plt.title('Rate of packets sent to the cloud')
         plt.show()
@@ -355,7 +355,7 @@ if infiniteBuff==False and maxBuffer==1:
                 random.seed(42)
                 arrival = serv/load
                 
-                data = Measure(0,0,0,0,0,0)
+                data = Measure(0,0,0,0,0,0,0)
                 env = simpy.Environment()
                 # start the arrival processes
                 env.process(arrival_process(env, MM1, SERVICE, arrival))
@@ -368,30 +368,30 @@ if infiniteBuff==False and maxBuffer==1:
             j = j+1
         i = i +1
 
-    plt.plot(loads, e_n[0,:], 'r', label='serv1')
-    plt.plot(loads, e_n[1,:], 'b',label='serv2')    
-    plt.plot(loads, e_n[2,:], 'g', label='serv3') 
-    plt.plot(loads, e_n[3,:], 'y', label='serv4')
+    plt.plot(loads, e_n[0,:], 'r', label='serv=5')
+    plt.plot(loads, e_n[1,:], 'b',label='serv=7')    
+    plt.plot(loads, e_n[2,:], 'g', label='serv=10') 
+    plt.plot(loads, e_n[3,:], 'y', label='serv=15')
     plt.xlabel('Loads')
     plt.ylabel('E[N]')
     plt.title('Average Number of Users')
     plt.legend()
     plt.show()
     
-    plt.plot(loads, e_t[0,:], 'r', label='serv1')
-    plt.plot(loads, e_t[1,:], 'b',label='serv2')    
-    plt.plot(loads, e_t[2,:], 'g', label='serv3') 
-    plt.plot(loads, e_t[3,:], 'y', label='serv4')
+    plt.plot(loads, e_t[0,:], 'r', label='serv=5')
+    plt.plot(loads, e_t[1,:], 'b',label='serv=7')    
+    plt.plot(loads, e_t[2,:], 'g', label='serv=10') 
+    plt.plot(loads, e_t[3,:], 'y', label='serv=15')
     plt.xlabel('Loads')
     plt.ylabel('E[T]')
     plt.legend()
     plt.title('Average delay')
     plt.show()
     
-    plt.plot(loads, cloud[0,:], 'r', label='serv1')
-    plt.plot(loads, cloud[1,:], 'b',label='serv2')    
-    plt.plot(loads, cloud[2,:], 'g', label='serv3') 
-    plt.plot(loads, cloud[3,:], 'y', label='serv4')
+    plt.plot(loads, cloud[0,:], 'r', label='serv=5')
+    plt.plot(loads, cloud[1,:], 'b',label='serv=7')    
+    plt.plot(loads, cloud[2,:], 'g', label='serv=10') 
+    plt.plot(loads, cloud[3,:], 'y', label='serv=15')
     plt.xlabel('Loads')
     plt.ylabel('Cloud rate')
     plt.title('Rate of packets sent to the cloud')
@@ -428,8 +428,7 @@ if maxBuffer>1:
     plt.plot(buffSize, busy_time, 'r', label='serv1')
     plt.xlabel('Buffer size')
     plt.ylabel('Busy time')
-    plt.title('Busy time vs buffer suze')
-    plt.legend()
+    plt.title('Busy time vs buffer size')
     plt.show()
     
 
