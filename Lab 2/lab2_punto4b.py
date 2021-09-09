@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 '''
-LAB 2 POINT 4, MULTIPLE SERVERS IN MICRO AND CLOUD DATA CENTER
+LAB 2 POINT 4b, MULTIPLE SERVERS IN MICRO AND CLOUD DATA CENTER with different 
+cost and service time
 
 '''
 
@@ -17,9 +18,7 @@ class Measure:
         self.delay = AverageDelay
         self.pCloud = SentToCloud # in the cloud system this is the number of loss packets 
         self.busy = busy
-    def reset(self):
-        self.ut = 0 
-        self.pCloud = 0 
+    
         
 class Measure_node:
     def __init__(self, Narr, busy, cost):
@@ -38,13 +37,22 @@ class Client:
         self.totWaitingDelay = 0  # tot time that the client waits until it is served 
         self.queuingTime = 0
         
+# ******************************************************************************
+# Servers
+# ******************************************************************************      
+class Server:
+    def __init__(self, cost, speed_pre, speed_post):
+        self.cost = cost
+        self.speed_pre = speed_pre
+        self.speed_post = speed_post
+
 
 # ******************************************************************************
 # Constants
 # ******************************************************************************
-LOAD=0.85
+LOAD=0.95
 SERVICE_PREPROC = 5.0 # av service time
-ARRIVAL = SERVICE_PREPROC/LOAD # av inter-arrival time
+ARRIVAL = 2/LOAD # av inter-arrival time
 TYPE1 = 'A'
 TYPE2 = 'B' 
 SERVICE_CLOUD_POSTPROC = 10.0
@@ -54,26 +62,51 @@ prop_time = 10 # time needed to move a packet from fog node to cloud datacenter
 prop_cloud_act = 13 # time needed to move a packet from cloud to actuators 
 prop_fog_act = 15 # time needed to move a packet from fog to actuators 
 T_q = 55.00 #max queueing time
-f = 0.1# fraction of packet b among all packets 
+f = 0.6# fraction of packet b among all packets 
 
-SIM_TIME = 1000000000
-maxBufferMD = 5
-maxBufferCD = 8
+#500000
+SIM_TIME = 500000
+maxBufferMD = 3
+maxBufferCD = 5
 arrivals=0
 users=0
 users_cloud = 0 
-n_server = 1
-n_serverCD = 2
+n_server = 2
+n_serverCD = 5
 busyMD = [False for i in range(n_server)]
 busyCD= [False for i in range(n_serverCD)]
 MM1=[]
 MM1_cloud=[] 
 entrance_user = []
 served_user = []
-actuators_user = []         
+actuators_user = []      
+queuingTot = []    
 k = 0
+prova = np.zeros(n_server)
 e_n = [] 
 e_n_cloud = [] 
+
+# create servers micro with low cost 
+fog1 = Server(0.005, 5,0)
+microServers = []
+microServers.append(fog1)
+microServers.append(fog1)
+
+# create servers cloud 
+cloud1= Server(0.02, 2, 5)
+cloud2 = Server(0.007, 3, 12)
+cloud3 = Server(0.004, 6, 14)
+cloudServers = []
+
+# generate different combination of the servers in the cloud
+cloudServers.append(cloud2)
+cloudServers.append(cloud1)
+cloudServers.append(cloud3)
+cloudServers.append(cloud2)
+cloudServers.append(cloud3)
+
+TOT_cost = 0 
+
 
 # ******************************************************************************
 # generator yield events to the simulator
@@ -83,29 +116,11 @@ e_n_cloud = []
 
 # arrivals *********************************************************************
 def arrival_process(environment,queue):
-    global users, prova
+    global users, prova, microServers, TOT_cost
     global BusyMD, f
     
-    while True:
-        # during the day changes the value of f
-        if env.now>SIM_TIME*0.09 and env.now<SIM_TIME*0.09999:
-            f = 0.2
-        if env.now>SIM_TIME*0.20000 and env.now<SIM_TIME*0.20001:
-            f=0.4
-        if env.now>SIM_TIME*0.30 and env.now<SIM_TIME*0.30001:
-           f=0.5
-        if env.now>SIM_TIME*0.40 and env.now<SIM_TIME*0.40001:
-            f=0.7
-        if env.now>SIM_TIME*0.50 and env.now<SIM_TIME*0.50001:
-            f=0.9
-        if env.now>SIM_TIME*0.60 and env.now<SIM_TIME*0.60001:
-            f=0.2
-        if env.now>SIM_TIME*0.70 and env.now<SIM_TIME*0.70001:
-            f=0.2
-        if env.now>SIM_TIME*0.90 and env.now<SIM_TIME*0.9001:
-            f=0.3
-          
-         
+    while True:         
+        #print("Arrival no. ",data.arr+1," at time ",environment.now," with ",users," users" )
         # cumulate statistics 
         data.arr += 1   
         data.ut += users*(environment.now-data.oldT)
@@ -130,9 +145,10 @@ def arrival_process(environment,queue):
                     busyMD[i] = True 
                     #print(i)
                     prova[i] = prova[i] + 1
-                    service_time = random.expovariate(1.0/SERVICE_PREPROC)
+                    service_time = random.expovariate(1.0/microServers[i].speed_pre)
                     data.busy += service_time
                     env.process(departure_process(environment, service_time,queue, i))
+                    TOT_cost = TOT_cost + microServers[i].cost
                     break
         elif users>=maxBufferMD+n_server:
             data.pCloud += 1
@@ -147,7 +163,7 @@ def arrival_process(environment,queue):
 # departures *******************************************************************
 def departure_process(environment, service_time, queue, i):
     global users
-    global BusyMD
+    global BusyMD, microServers, TOT_cost
     global k, prova
     
     #print(len(queue))
@@ -170,15 +186,16 @@ def departure_process(environment, service_time, queue, i):
         arrival_cloud_process(environment, MM1_cloud,user)
     if user.type == TYPE1: 
         user.queuingTime = (environment.now-user.Tarr) + prop_fog_act 
-        
+        queuingTot.append(user.queuingTime)
     #if (len(queue) - sum(prova)<0): 
     if users < n_server:
         busyMD[i] = False 
     else:
         prova[i] = prova[i] + 1 
-        service_time = random.expovariate(1.0/SERVICE_PREPROC)
+        service_time = random.expovariate(1.0/microServers[i].speed_pre)
         data.busy += service_time
         env.process(departure_process(environment, service_time,queue, i))
+        TOT_cost = TOT_cost + microServers[i].cost
         # the execution flow will resume here
         # when the "timeout" event is executed by the "environment"
 
@@ -188,7 +205,7 @@ def departure_process(environment, service_time, queue, i):
     
 # arrivals *********************************************************************
 def arrival_cloud_process(environment,queue1, client):
-    global users_cloud
+    global users_cloud,cloudServers, TOT_cost
     global BusyCD
     
     #print("Arrival no. ",data.arr+1," at time ",environment.now," with ",users," users" )
@@ -208,14 +225,15 @@ def arrival_cloud_process(environment,queue1, client):
                 busyCD[j] = True 
                 if client.type == TYPE1:
                     # packet of type A only requires preprocessing in the cloud
-                    service_time = random.expovariate(1.0/SERVICE_CLOUD_PREPROC)
+                    service_time = random.expovariate(1.0/cloudServers[j].speed_pre)
                 elif client.type == TYPE2:
                     if client.preproc == 1: 
                         # packet of type B that has already done preproc only needs post processing in the cloud
-                        service_time = random.expovariate(1.0/SERVICE_CLOUD_POSTPROC)
+                        service_time = random.expovariate(1.0/cloudServers[j].speed_post)
                     else:
                         # packet of type B that hasn't done preproc needs pre and post processing in the cloud
-                        service_time = random.expovariate(1.0/(SERVICE_CLOUD_POSTPROC+SERVICE_CLOUD_PREPROC))
+                        service_time = random.expovariate(1.0/(cloudServers[j].speed_pre +cloudServers[j].speed_post))
+                TOT_cost = TOT_cost + cloudServers[j].cost
                 cloud.busy += service_time
                 env.process(departure_cloud(environment, service_time,queue1, j))
                 break
@@ -225,7 +243,7 @@ def arrival_cloud_process(environment,queue1, client):
    
 # departures *******************************************************************
 def departure_cloud(environment, service_time, queue1, i):
-    global users_cloud
+    global users_cloud, cloudServers, TOT_cost
     global BusyCD
 
     yield environment.timeout(service_time) 
@@ -236,7 +254,7 @@ def departure_cloud(environment, service_time, queue1, i):
     cloud.oldT = environment.now
     
     user.queuingTime = (environment.now-user.Tarr) + prop_time + prop_cloud_act 
-    
+    queuingTot.append(user.queuingTime)
     
     #update state variable and extract the client in the queue
     users_cloud = users_cloud - 1
@@ -246,15 +264,15 @@ def departure_cloud(environment, service_time, queue1, i):
     else:
         if user.type == TYPE1:
             # packet of type A only requires preprocessing in the cloud
-            service_time = random.expovariate(1.0/SERVICE_CLOUD_PREPROC)
+            service_time = random.expovariate(1.0/cloudServers[i].speed_pre)
         elif user.type == TYPE2:
             if user.preproc == 1: 
                 # packet of type B that has already done preproc only needs post processing in the cloud
-                service_time = random.expovariate(1.0/SERVICE_CLOUD_POSTPROC)
+                service_time = random.expovariate(1.0/cloudServers[i].speed_post)
             else:
                 # packet of type B that hasn't done preproc needs pre and post processing in the cloud
-                service_time = random.expovariate(1.0/(SERVICE_CLOUD_POSTPROC+SERVICE_CLOUD_PREPROC))
-       
+                service_time = random.expovariate(1.0/(cloudServers[i].speed_pre + cloudServers[i].speed_post))
+        TOT_cost = TOT_cost + cloudServers[i].cost
         cloud.busy += service_time
         env.process(departure_cloud(environment, service_time,queue1, i))
         # the execution flow will resume here
@@ -274,7 +292,6 @@ env.process(arrival_process(env, MM1))
 # simulate until SIM_TIME
 env.run(until=SIM_TIME)
 print('\n')
-
 
 # print output data
 
@@ -302,27 +319,6 @@ print("Actual queue size: ",len(MM1_cloud))
 print("\nAverage number of users (E[N]) = ",cloud.ut/env.now)
 print("Average delay (E[T]) =  ",cloud.delay/cloud.dep)
 print("Loss probability: ", cloud.pCloud/data.arr)
+print("cost: ",TOT_cost)
+print("avg queuieng time: ",np.mean(queuingTot))
 
-print('-----------------')
-print(cloud.pCloud)
-
-
-
-print("\nAverage number of users (E[N]) = ",data.ut/env.now)
-print("\nAverage number of users (E[N]) = ",cloud.ut/env.now)
-
-del e_n[0:2000]
-plt.plot(e_n, 'r')
-plt.xlabel('Time of the day')
-plt.ylabel('Loss probability')
-plt.title('Loss probability during the day')
-plt.show()
-
-print(len(e_n_cloud))
-del e_n_cloud[0:2000]
-print(len(e_n_cloud))
-plt.plot(e_n_cloud, 'r')
-plt.xlabel('Time of the day')
-plt.ylabel('E[N] Cloud Data Center')
-plt.title('E[N] of Cloud during day')
-plt.show()
